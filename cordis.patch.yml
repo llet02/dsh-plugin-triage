@@ -1,0 +1,7 @@
+# dsh-plugin-triage bundle layer: mounted by `dsh plugin add` / 设置 → 插件 → 添加插件.
+# The row id is part of the contract: the settings namespace served by the Host
+# half's Config schema is keyed by this id, and the client tab lives under the
+# same entry id.
+- insert:
+    - id: plugin-triage
+      name: dsh-plugin-triage

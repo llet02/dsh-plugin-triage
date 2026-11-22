@@ -1,0 +1,51 @@
+{
+  "format": 1,
+  "title": {
+    "en": "dsh-plugin-triage",
+    "zh": "dsh-plugin-triage · 插件冲突体检"
+  },
+  "description": {
+    "en": "Conflict triage and one-click governance for the DSH plugin page: what is installed, what collides, what is broken, and what each plugin can actually do.",
+    "zh": "DSH 插件页上的冲突体检与一键治理：装了哪些、谁在打架、谁坏了、每个插件到底能干什么。"
+  },
+  "plugins": [
+    {
+      "name": "dsh-plugin-triage",
+      "title": {
+        "en": "Plugin conflict triage",
+        "zh": "插件冲突体检与一键治理"
+      },
+      "description": {
+        "en": "Adds a conflict-clinic tab to Settings → Plugins. Groups duplicate mounts and duplicate modules, flags engine incompatibility and load failures, and offers one-click update / disable conflicting / disable broken / translate descriptions, plus a static capability scan (tools, UI, web routes, subagents, MCP, and more) with file:line evidence.",
+        "zh": "在「设置 → 插件」页新增冲突体检标签页：把重复挂载与重复装载分组标红，标出引擎不兼容与加载失败，并提供一键更新 / 一键禁用冲突 / 一键禁用报错 / 一键翻译描述，以及带 file:line 证据的能力扫描（工具、UI、Web 接口、子代理、MCP 等）。"
+      },
+      "icon": "icon.svg",
+      "homepage": "https://github.com/your-name/dsh-plugin-triage",
+      "repository": {
+        "url": "https://github.com/your-name/dsh-plugin-triage"
+      },
+      "metadata": {
+        "keywords": [
+          "dsh",
+          "plugin",
+          "conflict",
+          "triage",
+          "capabilities",
+          "translate"
+        ]
+      },
+      "versions": [
+        {
+          "version": "0.3.0",
+        "publishTimestamp": 1795340958,
+          "source": {
+            "type": "npm"
+          },
+          "engines": {
+            "dsh": ">=0.2.0-rc.2"
+          }
+        }
+      ]
+    }
+  ]
+}

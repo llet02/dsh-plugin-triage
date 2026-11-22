@@ -1,0 +1,60 @@
+{
+  "name": "dsh-plugin-triage",
+  "version": "0.3.0",
+  "description": "插件冲突体检与一键治理：同类冲突分组（数量、标红、后果）、一键更新 / 一键禁用冲突 / 一键禁用报错 / 一键翻译描述 / 能力扫描（工具·UI·Web接口·子代理等）、与当前 DSH 的兼容性检查。Plugin conflict triage and one-click governance for DeepSeek Harness.",
+  "type": "module",
+  "main": "entry.js",
+  "exports": {
+    ".": "./entry.js",
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "entry.js",
+    "lib",
+    "cordis.patch.yml",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh",
+    "deepseek",
+    "harness",
+    "plugin",
+    "conflict",
+    "triage",
+    "capabilities",
+    "translate",
+    "bulk-update",
+    "一键治理",
+    "能力扫描",
+    "翻译",
+    "compatibility",
+    "插件",
+    "冲突",
+    "兼容性"
+  ],
+  "license": "MIT",
+  "icon": "icon.svg",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "^3.18.4"
+  },
+  "dsh": {
+    "engines": {
+      "dsh": ">=0.2.0-rc.2"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  }
+}
