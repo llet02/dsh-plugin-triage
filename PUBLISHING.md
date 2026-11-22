@@ -2,16 +2,13 @@
 
 「DSH 插件源」不是一个上传接口，而是**一份你自己托管的 JSON 索引**：
 DSH 在 `设置 → 插件 → 自定义插件索引`（Discover）里按 URL 读取它，再通过 `pluginManager.installBundle` 安装条目。
-所以发布 = ① 把包发到 npm ② 把索引 JSON 托管成可访问的 URL ③ 把 URL 填进 DSH。
 
-本仓库已经带好第 ② 步的产物：`market/index.json` + `market/icon.svg`（格式 1，已用官方 `@deepseek-ai/dsh-plugin-market-index` 校验器验证）。
+本仓库选定的通道是 **git 源 + GitHub Pages 托管索引**：不需要 npm 账号，推送仓库即发布，索引钉死 40 位 commit（可复现、不可变）。
 
 ## 0. 前置
 
-- Node / pnpm：本机自带于 DSH 运行时目录
-  - `C:\Users\<你>\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe`
-  - `C:\Users\<你>\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\pnpm\bin\pnpm.mjs`
-- npm 账号（`npm login`，或准备一个只用于本仓库的 automation token）
+- Node（本机自带于 DSH 运行时）：`C:\Users\<你>\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe`
+- 一个 GitHub 仓库（公开即可；不需要 token 也能发布，只要你能 push）
 
 ## 1. 自检
 
@@ -20,61 +17,72 @@ node --check entry.js
 node --check lib/client.js
 ```
 
-## 2. 发到 npm
+## 2. 提交（发布 = 推送）
 
 ```bash
 cd D:/dsh-plugin-src/dsh-plugin-triage
-node C:/Users/<你>/.dsh/dsh-runtimes/dsh-primary-runtime/dependencies/pnpm/bin/pnpm.mjs publish --access public
+git add -A
+git commit -m "feat: 一键治理 + 能力扫描 v0.3.0"
+git remote add origin https://github.com/<user>/<repo>.git
+git push -u origin HEAD
 ```
 
-只想内部试用时，用私有 registry 并在索引的 `versions[].source.registry` 里写同一个地址。
-发布后验证：
+## 3. 生成索引（钉住 HEAD commit）
 
 ```bash
-npm view dsh-plugin-triage version
+node scripts/build-index.mjs https://github.com/<user>/<repo>
 ```
 
-## 3. 更新索引条目
+它读 `package.json`（name / version / engines / keywords）与 `git rev-parse HEAD`，写出 `market/index.json`：
+`versions[0].source = { type: "git", url, commit }` —— commit 就是刚才那次提交，所以**先提交代码，再生成索引，再提交索引**。
+工作树不干净时脚本会警告：那次 commit 不含未提交的改动。
 
-`market/index.json` 里改三处：
-
-1. `plugins[0].versions[0].version` → 与刚发布的版本一致（对应 `package.json.version`）；
-2. 可选：给该版本加 `publishTimestamp`（毫秒时间戳）；
-3. `homepage` / `repository.url` → 换成真实仓库地址（现在是占位符 `your-name`）。
-
-校验（用 DSH 自带的校验器，避免格式 1 规则漂移）：
+校验（用 DSH 自带的官方校验器，避免格式 1 规则漂移）：
 
 ```js
 import { parseMarketIndex } from '@deepseek-ai/dsh-plugin-market-index'
-const url = 'https://example.com/market/index.json'
-const index = parseMarketIndex(JSON.parse(fs.readFileSync('market/index.json', 'utf8')), url)
+const url = 'https://<user>.github.io/<repo>/market/index.json'
+const index = parseMarketIndex(JSON.parse(readFileSync('market/index.json', 'utf8')), url)
+// index.plugins[0].icon 会被解析成绝对 URL
 ```
 
-## 4. 托管索引
+## 4. 托管索引（GitHub Pages，branch 根目录）
 
-任选一种，关键是拿到**可公开 GET 的绝对 URL**：
+1. 仓库 Settings → Pages → Source: **Deploy from a branch**，Branch: `main`，目录 **/(root)**；
+2. 等 Pages 构建完成，索引地址即：
+   `https://<user>.github.io/<repo>/market/index.json`
+3. `icon` 用相对路径 `icon.svg`，按索引 URL 解析为 `.../market/icon.svg` —— 所以 `market/icon.svg` 必须一起推送（本仓库已就位）。
 
-| 方式 | URL 形状 | 备注 |
-| --- | --- | --- |
-| GitHub Pages | `https://<user>.github.io/<repo>/market/index.json` | 推荐：内容类型正确、带 CDN |
-| raw.githubusercontent | `https://raw.githubusercontent.com/<user>/<repo>/main/market/index.json` | 最快，但内容类型是 text/plain |
-| Gitee raw | `https://gitee.com/<user>/<repo>/raw/main/market/index.json` | 国内访问更稳 |
-
-`icon` 是相对路径，会按索引 URL 解析 —— 所以 `market/icon.svg` 必须和 `index.json` 一起托管（本仓库已就位）。
+不想开 Pages 时，同一份文件也能用 raw 链接：
+`https://raw.githubusercontent.com/<user>/<repo>/main/market/index.json`（内容类型是 text/plain，但读取端只取 body）。
 
 ## 5. 在 DSH 里登记
 
 1. 设置 → 插件 → **自定义插件索引** → 启用；
-2. 添加索引 URL（第 4 步的地址）；
-3. 插件页出现 **发现** 标签，条目即本插件，点安装 → `dsh-plugin-triage@<版本>`。
+2. 添加索引 URL；
+3. 插件页出现 **发现** 标签 → 条目 → 安装（spec 形如 `git+https://github.com/<user>/<repo>.git#<40位commit>`）。
 
-## 6. 收集反馈
+## 6. 发新版本
 
-- 索引条目的 `homepage` / `repository.url` 是用户点「问题报告」时的落点，务必填真实地址；
-- 建议在仓库开两个 Issue 模板：**冲突误报**（附体检报告 JSON：`curl http://127.0.0.1:<port>/api/dsh-plugin-triage/state`）与**功能建议**；
-- 误报排查优先看报告里的 `capabilities[].evidence` 与 `conflicts[].members[].patch` —— 它们直接给出 file:line 与补丁声明行。
+```bash
+node scripts/build-index.mjs https://github.com/<user>/<repo>   # 先提交，再跑
+git add -A && git commit -m "release: v0.3.1" && git push
+```
+
+索引里 `versions` 是数组，多版本并存由读取端按 SemVer 取最高兼容版本；旧版本条目可保留用于回滚。
 
 ## 7. 回滚
 
-- 发行包：`npm deprecate dsh-plugin-triage@<坏版本> "<原因>"`，索引里把 `versions` 改回上一个可用版本（索引保留多版本即可，读取端取最高兼容版本）；
-- 索引本身：改回上一版 JSON 重新部署，DSH 有 `cacheTtlMs`（默认 10 分钟）自动刷新。
+- 坏版本：把索引里对应 `versions[]` 条目删掉并推送（Discover 有 `cacheTtlMs`，默认 10 分钟自动刷新）；
+- 索引本身：`git revert` 上一次索引提交即可。
+
+## 8. 收集反馈
+
+- 索引条目的 `homepage` / `repository.url` 是用户点「问题报告」的落点，务必填真实地址；
+- 建议开两个 Issue 模板：**冲突误报**（附 `curl http://127.0.0.1:<port>/api/dsh-plugin-triage/state` 的 JSON）与**功能建议**；
+- 误报排查优先看 `conflicts[].members[].patch`（补丁声明行）与 `capabilities[].tags[].evidence`（file:line）。
+
+## 附：改用 npm 通道
+
+若之后要发 npm：`pnpm publish --access public`，然后把 `scripts/build-index.mjs` 里的
+`source` 换成 `{ type: 'npm' }` 并去掉 `commit`；索引里同一版本只能挂一个 source。

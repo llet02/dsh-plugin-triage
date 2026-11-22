@@ -27,19 +27,31 @@
       "metadata": {
         "keywords": [
           "dsh",
+          "deepseek",
+          "harness",
           "plugin",
           "conflict",
           "triage",
           "capabilities",
-          "translate"
+          "translate",
+          "bulk-update",
+          "一键治理",
+          "能力扫描",
+          "翻译",
+          "compatibility",
+          "插件",
+          "冲突",
+          "兼容性"
         ]
       },
       "versions": [
         {
           "version": "0.3.0",
-        "publishTimestamp": 1795340958,
+          "publishTimestamp": 1795341437,
           "source": {
-            "type": "npm"
+            "type": "git",
+            "url": "https://github.com/your-name/dsh-plugin-triage",
+            "commit": "a939de63531ce0b9c3f7015e8e5485372dd874ab"
           },
           "engines": {
             "dsh": ">=0.2.0-rc.2"
