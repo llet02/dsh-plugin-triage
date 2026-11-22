@@ -631,6 +631,12 @@ function writeTranslationCache(cache) {
   }
 }
 
+/** The cached translation for one bundle version, or null when absent. */
+function cachedTranslation(cache, name, version) {
+  const entry = cache.entries[name + '@' + (version ?? '')]
+  return entry && typeof entry.text === 'string' && entry.text !== '' ? entry : null
+}
+
 /** A description needs translating when it carries no CJK at all. */
 function needsTranslation(text) {
   return typeof text === 'string' && text.trim() !== '' && !CJK.test(text)
@@ -699,8 +705,8 @@ async function resolveTranslationRoute(llm, config) {
     + '），但都没有报告可用模型：请在本插件设置里填写 translationProvider / translationModel')
 }
 
-/** Stream one translation and return its text; a rejected call throws. */
-async function translateText(llm, route, text) {
+/** One translation attempt: the visible text of a streamed call, or ''. */
+async function streamTranslation(llm, route, text) {
   const stream = llm.stream({
     provider: route.provider,
     model: route.model,
@@ -726,6 +732,19 @@ async function translateText(llm, route, text) {
     }
   }
   return parts.join('').trim()
+}
+
+/**
+ * Translate one description, retrying once when the call yields no visible text.
+ *
+ * A model may answer with reasoning only and no text-delta (observed on a long
+ * catalog description); skipping the bundle on the first empty answer left a
+ * permanent hole in the list while the user saw "已翻译 N 个".
+ */
+async function translateText(llm, route, text) {
+  const first = await streamTranslation(llm, route, text)
+  if (first !== '') return first
+  return streamTranslation(llm, route, text)
 }
 
 // ---------------------------------------------------------------------------
@@ -1217,6 +1236,13 @@ async function buildReport(ctx, config) {
     for (const tag of caps.tags) capabilityCounts[tag.key] = (capabilityCounts[tag.key] ?? 0) + 1
   }
   const translationCache = readTranslationCache()
+  // Every bundle in the inventory may carry a translatable description: the
+  // installed third-party ones AND the official catalog entries that are not
+  // installed yet. Both lists are translated, so the count covers both.
+  const translationOf = (name, version) => cachedTranslation(translationCache, name, version)
+  const untranslatedCount = bundles.filter(
+    (bundle) => needsTranslation(bundle.description) && translationOf(bundle.name, bundle.version) === null,
+  ).length
 
   const stats = {
     runtimeVersion,
@@ -1237,7 +1263,7 @@ async function buildReport(ctx, config) {
     failed: [...issues].filter((i) => i.type === 'failed').length,
     exempted: [...compatByBundle.values()].filter((c) => c.status === 'exempted').length,
     capabilityCounts,
-    untranslated: bundles.filter((b) => b.installed && needsTranslation(b.description)).length,
+    untranslated: untranslatedCount,
   }
 
   return {
@@ -1258,7 +1284,7 @@ async function buildReport(ctx, config) {
       thirdParty: b.installed && !b.official,
       patch: b.installed ? patchFor(b.name) : null,
       capabilities: capabilityByBundle.get(b.name) ?? null,
-      descriptionZh: (translationCache.entries[b.name + '@' + (b.version ?? '')] ?? null),
+      descriptionZh: translationOf(b.name, b.version),
       compat: compatByBundle.get(b.name) ?? {
         status: b.installed ? 'unknown' : 'n/a',
         reason: b.installed ? '未读到包清单（manifest）' : '未安装，安装时由管理器校验',
@@ -1276,6 +1302,7 @@ async function buildReport(ctx, config) {
         version: b.version,
         official: b.official,
         description: b.description,
+        descriptionZh: translationOf(b.name, b.version),
         installTarget: b.installTarget ?? null,
         enabled: b.enabled,
       })),
@@ -1497,13 +1524,17 @@ async function runAction(ctx, config, action, body) {
       const llm = llmService(ctx)
       if (llm === null) throw new Error('宿主未暴露 llm 服务（此 profile 未挂载 @deepseek-ai/dsh-llm）：无法翻译插件描述')
       const route = await resolveTranslationRoute(llm, config)
-      const bundles = (await pm.listBundles()).filter((bundle) => bundle.installed)
+      // Both lists are in scope: installed third-party bundles AND the official
+      // catalog entries that are not installed yet (the 官方目录 area).
+      const bundles = await pm.listBundles()
       const requested = Array.isArray(body.names) ? body.names.map(String).filter((name) => name !== '') : []
+      const refresh = body.refresh === true
+      const cache = readTranslationCache()
       const pool = requested.length > 0
         ? bundles.filter((bundle) => requested.includes(bundle.name))
-        : bundles.filter((bundle) => needsTranslation(bundle.description))
+        : bundles.filter((bundle) => needsTranslation(bundle.description)
+          && (refresh || cachedTranslation(cache, bundle.name, bundle.version) === null))
       const targets = pool.slice(0, 12)
-      const cache = readTranslationCache()
       const translations = {}
       const skipped = []
       for (const bundle of targets) {
@@ -1513,8 +1544,8 @@ async function runAction(ctx, config, action, body) {
           continue
         }
         const key = bundle.name + '@' + (bundle.version ?? '')
-        const cached = cache.entries[key]
-        if (cached && typeof cached.text === 'string' && cached.text !== '') {
+        const cached = cachedTranslation(cache, bundle.name, bundle.version)
+        if (cached !== null && !refresh) {
           translations[bundle.name] = cached
           continue
         }
@@ -1524,14 +1555,31 @@ async function runAction(ctx, config, action, body) {
             skipped.push({ name: bundle.name, reason: '模型返回空译文' })
             continue
           }
-          const entry = { text: translated, at: Date.now(), model: route.provider + '/' + route.model }
+          const entry = {
+            text: translated,
+            at: Date.now(),
+            model: route.provider + '/' + route.model,
+            installed: bundle.installed === true,
+          }
           cache.entries[key] = entry
           translations[bundle.name] = entry
         } catch (error) {
           skipped.push({ name: bundle.name, reason: String(error && error.message ? error.message : error) })
         }
       }
-      return { route, translations, skipped, persisted: writeTranslationCache(cache), truncated: pool.length > targets.length }
+      // The remaining count covers every description still lacking a
+      // translation, so a second press continues where the first stopped
+      // instead of re-reporting the same gap as if nothing had happened.
+      const remaining = bundles.filter((bundle) => needsTranslation(bundle.description)
+        && cachedTranslation(cache, bundle.name, bundle.version) === null).length
+      return {
+        route,
+        translations,
+        skipped,
+        persisted: writeTranslationCache(cache),
+        truncated: pool.length > targets.length,
+        remaining,
+      }
     }
     case 'translate-probe': {
       const llm = llmService(ctx)
