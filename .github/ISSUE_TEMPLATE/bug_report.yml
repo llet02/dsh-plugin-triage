@@ -1,0 +1,44 @@
+name: 冲突误报 / Bug
+description: 体检报告报错了、或某个一键动作的结果不对
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先贴**体检报告 JSON**，它含冲突分组、补丁声明行与能力证据 file:line，没有它基本无法复现。
+
+        Windows PowerShell:
+        ```powershell
+        curl.exe -s http://127.0.0.1:61732/api/dsh-plugin-triage/state > triage.json
+        ```
+        （端口以 DSH 实际监听为准；也可在浏览器 F12 → Network 里抓 `dsh-plugin-triage/state`）
+  - type: textarea
+    id: report
+    attributes:
+      label: 体检报告 JSON
+      description: 可以直接贴全文，或只贴相关片段（conflicts / issues / capabilities）
+      render: json
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: DSH 版本 / 本插件版本
+      placeholder: "DSH 0.2.2-rc.1 / dsh-plugin-triage 0.3.0"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 你期望看到什么
+      placeholder: 例：这两个包其实不冲突，因为……
+    validations:
+      required: true
+  - type: textarea
+    id: action
+    attributes:
+      label: 如果是「一键」动作的问题
+      description: 动作名（一键更新 / 禁用冲突 / 禁用报错 / 翻译）+ 返回的 toast 文案 + 是否 restart-required
+    validations:
+      required: false

@@ -1,0 +1,40 @@
+name: 功能建议
+description: 希望插件多做什么、少做什么
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你遇到的场景
+      description: 具体到「装了哪些插件、想达成什么」比抽象描述有用得多
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: 你希望的形态
+      placeholder: 例：能力标签想按「模型可见 / 仅 UI」再分组
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 涉及区域
+      options:
+        - 冲突分组
+        - 一键更新
+        - 一键禁用冲突 / 报错
+        - 描述翻译
+        - 能力扫描
+        - 界面 / 交互
+        - 其他
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 自检
+      options:
+        - label: 我确认这不是“插件本身坏了”，而是本插件的判定/交互问题
+          required: false
