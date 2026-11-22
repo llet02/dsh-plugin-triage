@@ -20,9 +20,9 @@
         "zh": "在「设置 → 插件」页新增冲突体检标签页：把重复挂载与重复装载分组标红，标出引擎不兼容与加载失败，并提供一键更新 / 一键禁用冲突 / 一键禁用报错 / 一键翻译描述，以及带 file:line 证据的能力扫描（工具、UI、Web 接口、子代理、MCP 等）。"
       },
       "icon": "icon.svg",
-      "homepage": "https://github.com/your-name/dsh-plugin-triage",
+      "homepage": "https://github.com/llet02/dsh-plugin-triage",
       "repository": {
-        "url": "https://github.com/your-name/dsh-plugin-triage"
+        "url": "https://github.com/llet02/dsh-plugin-triage"
       },
       "metadata": {
         "keywords": [
@@ -47,11 +47,11 @@
       "versions": [
         {
           "version": "0.3.0",
-          "publishTimestamp": 1795341437,
+          "publishTimestamp": 1795342919,
           "source": {
             "type": "git",
-            "url": "https://github.com/your-name/dsh-plugin-triage",
-            "commit": "a939de63531ce0b9c3f7015e8e5485372dd874ab"
+            "url": "https://github.com/llet02/dsh-plugin-triage",
+            "commit": "4d32bf9b39b92d72d7420214177467a3ffcce0f1"
           },
           "engines": {
             "dsh": ">=0.2.0-rc.2"
